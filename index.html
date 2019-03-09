@@ -3,8 +3,187 @@
     <head>
         <meta charset="utf-8">
         <title>Counting Cars in Brussels</title>
+        <link rel="stylesheet" href="lib/bootstrap/4.3.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="lib/leaflet/1.4.0/leaflet.css">
+        <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+
+        @media only screen and (min-device-width : 320px)  and (max-device-width : 1024px){
+            #map {
+                height: 250px; 
+                width: 100%;
+            }
+        }
+    </style>
     </head>
     <body>
-        <h1>Counting Cars in Brussels</h1>
+        <div class="container">
+            <div class="row">
+                <div class="col">
+                    <h1>Brussels' <span id="number_of_counters"></span> Car Traffic Counters <small><span id="request_date"></span></small></h1>
+                    <p>
+                        <small>The region of Brussels publishes open data. <a href="https://data-mobility.brussels/traffic/api/counts/" target="_blank">Remarks on accuracy</a>. This page does not support Internet Explorer.</small>
+                    </p>
+                    <p>
+                        <small>The below map shows for each counter device (sum of the lanes) a circle: 
+                            <ul>
+                                <li>Their radius is the count of the last 5 minutes divided by 7 (in pixels). The minimum radius is 5 pixels.</li>
+                                <li>The colour of each circle is determined by the average speed measured the previous five minutes: black means <i>no data</i>, red is slow, green is faster than 20 km/h.</li>
+                            </ul>
+                        </small>
+                    </p>
+                </div>
+            </div>	
+            <div class="row">
+                <div class="col">
+                    <div id="map">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <div class="table-responsive">
+                        <table class="table table-condensed table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th>Count<br>(cars last minute)</th><th>Count<br>(cars last 5 minutes)</th>
+                                    <th>Count<br>(cars last hour)</th>
+                                    <!--<th>Occupancy<br>(% of time a car in view)</th>-->
+                                    <th>Speed<br>(km/h last minute)</th>
+                                    <th>Speed<br>(km/h last 5 minutes)</th>
+                                    <th>Speed<br>(km/h last hour)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trafficcounters" >
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="lib/jquery/3.3.1/jquery-3.3.1.min.js"></script>
+        <script src="lib/leaflet/1.4.0/leaflet.js"></script>
+        <script>
+            /*
+                API documentation
+                - Open Data Portal: http://opendatastore.brussels/en/dataset/traffic-count
+                - Technical: https://data-mobility.brussels/traffic/api/counts/
+            */
+
+            getDevices();
+
+            var map;
+            var layer;
+
+            async function getDevices(){
+                /* available devices */
+                let result = await fetch("https://data-mobility.brussels/traffic/api/counts/?request=devices");
+                let devices = await result.json();
+                //console.log(devices);
+                
+                let r = await fetch("https://data-mobility.brussels/traffic/api/counts/?request=live");
+                let measurements = await r.json();
+                
+                $("#number_of_counters").text(Object.keys(measurements.data).length);
+                $("#request_date").text(measurements.requestDate);
+                
+                $("#trafficcounters").html("");
+	
+                devices.features.forEach(function(device, index, array){
+                    array[index].properties.results = measurements.data[device.properties.traverse_name].results;
+                });
+	
+                for(var device of devices.features){
+                    $("#trafficcounters")
+                    .append("<tr>"
+						+ `<td title=${device.properties.traverse_name}>` + device.properties.descr_nl
+							+ "<br>" + device.properties.descr_fr + "</td>"
+						+ `<td title="${measurements.data[device.properties.traverse_name].results['1m'].t1.start_time} - ${measurements.data[device.properties.traverse_name].results['1m'].t1.end_time}">` + measurements.data[device.properties.traverse_name].results["1m"].t1.count + "</td>"
+						+ "<td>" + measurements.data[device.properties.traverse_name].results["5m"].t1.count + "</td>" 
+						+ "<td>" + measurements.data[device.properties.traverse_name].results["60m"].t1.count + "</td>"
+						/*+ "<td>" + measurements.data[device.properties.traverse_name].results["60m"].t1.occupancy + "</td>"*/
+						+ "<td>" + measurements.data[device.properties.traverse_name].results["1m"].t1.speed + "</td>"
+						+ "<td>" + measurements.data[device.properties.traverse_name].results["5m"].t1.speed + "</td>"
+						+ "<td>" + measurements.data[device.properties.traverse_name].results["60m"].t1.speed + "</td>"
+						+"</tr>")
+	            }  
+	
+                //console.log(map);
+                if(typeof map == 'undefined'){
+                    map = L.map('map').setView([50.8503, 4.3517], 13);
+                }
+                //console.log(layer);
+                if(typeof layer != 'undefined'){
+                    layer.remove();
+                }
+                layer = L.geoJSON(null, {pointToLayer: visualizeDevice, onEachFeature: definePopup}).addTo(map);
+                layer.addData(devices);
+
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);	
+
+                setTimeout(getDevices, 60000);
+            }
+
+            function rgb(feature){
+                let color = "#000000";
+                if(feature.properties.results["5m"].t1.speed == null){
+                    return "#000000";
+                }else if(feature.properties.results["5m"].t1.speed <= 0){
+                    return "#ff0000"
+                }else if(feature.properties.results["5m"].t1.speed < 10){
+                    return "#ff1111";
+                }else if(feature.properties.results["5m"].t1.speed < 20){
+                    return "#ff7800";
+                }else{
+                    return "#55ff55";
+                }
+            }
+
+            function visualizeDevice(feature, latlng){
+                var geojsonMarkerOptions = {
+                    radius: feature.properties.results["5m"].t1.count/7 < 5 ? 5 : feature.properties.results["5m"].t1.count/7,
+                    fillColor: rgb(feature),
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.4
+                };
+                return L.circleMarker(latlng, geojsonMarkerOptions);
+            }
+
+            function definePopup(feature, layer){
+                if(feature.properties){
+                    layer.bindPopup("<h4>" 
+                        + feature.properties.descr_en + "</h4>" 
+                        + "<div>Count (last 5 min): " 
+                        + feature.properties.results["5m"].t1.count 
+                        + " cars"
+                        + "<br>Speed (last 5 min): " 
+                        + feature.properties.results["5m"].t1.speed + " km/h"
+                        + "</div>"
+                        + "<div>Count (previous hour): "
+                        + feature.properties.results["60m"].t1.count
+                        + " cars"
+                        + "<br>Speed (previous hour): "
+                        + feature.properties.results["60m"].t1.speed + " km/h"
+                        + "</div>");
+                }
+            }
+
+            /*
+            function resizeMap(){
+                $("#map").css("height", "600px");
+            }
+
+            $(window).on("resize", resizeMap).trigger("resize");
+            */
+        </script>
     </body>
 </html>
