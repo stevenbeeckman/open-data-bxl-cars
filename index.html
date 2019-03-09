@@ -13,7 +13,7 @@
 
         @media only screen and (min-device-width : 320px)  and (max-device-width : 1024px){
             #map {
-                height: 250px; 
+                height: 600px; 
                 width: 100%;
             }
         }
@@ -25,14 +25,18 @@
                 <div class="col">
                     <h1>Brussels' <span id="number_of_counters"></span> Car Traffic Counters <small><span id="request_date"></span></small></h1>
                     <p>
-                        <small>The region of Brussels publishes open data. <a href="https://data-mobility.brussels/traffic/api/counts/" target="_blank">Remarks on accuracy</a>. This page does not support Internet Explorer.</small>
+                        <small>The region of Brussels publishes open data. <a href="https://data-mobility.brussels/traffic/api/counts/" target="_blank">Please read the remarks on the accuracy of the data used.</a>. This page does not support Internet Explorer.</small>
                     </p>
                     <p>
-                        <small>The below map shows for each counter device (sum of the lanes) a circle: 
+                        <small>
+                            The map shows for each counter device (sum of the lanes at that location) a circle: 
                             <ul>
-                                <li>Their radius is the count of the last 5 minutes divided by 7 (in pixels). The minimum radius is 5 pixels.</li>
-                                <li>The colour of each circle is determined by the average speed measured the previous five minutes: black means <i>no data</i>, red is slow, green is faster than 20 km/h.</li>
+                                <li>Every minute the data is refreshed.</li>
+                                <li>You can click on each circle to see the raw data.</li>
+                                <li>The radius is the cars counted during the previous block of five minutes divided by seven (in pixels). The minimum radius is 5 pixels.</li>
+                                <li>The colour of each circle is determined by the average speed measured the previous block of five minutes: black means <i>no data</i>, red is slow, green is faster than 20 km/h.</li>
                             </ul>
+                            Please share this page if you like it. Comments are welcome on Twitter to <a href="https://twitter.com/shadowmedia">@shadowmedia</a>.
                         </small>
                     </p>
                 </div>
@@ -114,7 +118,7 @@
 	
                 //console.log(map);
                 if(typeof map == 'undefined'){
-                    map = L.map('map').setView([50.8503, 4.3517], 13);
+                    map = L.map('map').setView([50.8503, 4.3517], 12);
                 }
                 //console.log(layer);
                 if(typeof layer != 'undefined'){
@@ -159,31 +163,17 @@
             }
 
             function definePopup(feature, layer){
-                if(feature.properties){
-                    layer.bindPopup("<h4>" 
-                        + feature.properties.descr_en + "</h4>" 
-                        + "<div>Count (last 5 min): " 
-                        + feature.properties.results["5m"].t1.count 
-                        + " cars"
-                        + "<br>Speed (last 5 min): " 
-                        + feature.properties.results["5m"].t1.speed + " km/h"
-                        + "</div>"
-                        + "<div>Count (previous hour): "
-                        + feature.properties.results["60m"].t1.count
-                        + " cars"
-                        + "<br>Speed (previous hour): "
-                        + feature.properties.results["60m"].t1.speed + " km/h"
-                        + "</div>");
+                if(feature.properties && feature.properties.results){
+                    layer.bindPopup(`<h4>${feature.properties.descr_en}</h4>`
+                        + `<div><h6>${feature.properties.results["5m"].t1.start_time.split(" ")[1]}-${feature.properties.results["5m"].t1.end_time.split(" ")[1]}</h6>`
+                        + `Count: ${feature.properties.results["5m"].t1.count} cars<br>`
+                        + `Speed: ${feature.properties.results["5m"].t1.speed} km/h</div>`
+                        + `<div><h6>${feature.properties.results["60m"].t1.start_time.split(" ")[1]}-${feature.properties.results["5m"].t1.end_time.split(" ")[1]}</h6>`
+                        + `Count: ${feature.properties.results["60m"].t1.count} cars<br>`
+                        + `Speed: ${feature.properties.results["60m"].t1.speed} km/h</div>`
+                    );
                 }
             }
-
-            /*
-            function resizeMap(){
-                $("#map").css("height", "600px");
-            }
-
-            $(window).on("resize", resizeMap).trigger("resize");
-            */
         </script>
     </body>
 </html>
