@@ -147,8 +147,8 @@
                     arrowsLayer.remove();
                 }
 
-                layer = L.geoJSON(null, {pointToLayer: visualizeDevice, onEachFeature: definePopup}).addTo(map);
-                layer.addData(devices);
+                /*layer = L.geoJSON(null, {pointToLayer: visualizeDevice, onEachFeature: definePopup}).addTo(map);
+                layer.addData(devices);*/
 
                 arrowsLayer = L.geoJson(null, {pointToLayer: visualizeArrows, onEachFeature: definePopup}).addTo(map);
                 arrowsLayer.addData(devices);
@@ -185,15 +185,15 @@
             function rgb(feature){
                 let color = "#000000";
                 if(feature.properties.results["5m"].t1.speed == null){
-                    return "#000000";
+                    return "#00000099";
                 }else if(feature.properties.results["5m"].t1.speed <= 0){
-                    return "#ff0000"
+                    return "#ff000099"
                 }else if(feature.properties.results["5m"].t1.speed < 10){
-                    return "#ff1111";
+                    return "#ff111199";
                 }else if(feature.properties.results["5m"].t1.speed < 20){
-                    return "#ff7800";
+                    return "#ff780099";
                 }else{
-                    return "#55ff55";
+                    return "#55ff5599";
                 }
             }
 
@@ -203,7 +203,7 @@
                         className: "arrowIcon"
                         , iconSize: new L.Point(20,20)
                         , iconAnchor: new L.Point(10,10)
-                        , html: `<div style='border: 1px dotted; color: ${rgb(feature)}; font-size: 10px; transform: scale(${feature.properties.results["5m"].t1.count/4 < 20 ? 20 : feature.properties.results["5m"].t1.count/4}, ${feature.properties.results["5m"].t1.speed/4 < 1 ? 1 : feature.properties.results["5m"].t1.speed/4}); rotate(${feature.properties.orientation+90.0}deg)'>&#10145;</div>`
+                        , html: `<div style='color: ${rgb(feature)}; font-size: 20px; transform: rotate(${feature.properties.orientation+90.0}deg) scale(${feature.properties.results["5m"].t1.count/40 < 1 ? 1 : feature.properties.results["5m"].t1.count/40}, ${feature.properties.results["5m"].t1.speed/20 < 1 ? 1 : feature.properties.results["5m"].t1.speed/20})'>&#10145;</div>`
                     })
                 });
             }
