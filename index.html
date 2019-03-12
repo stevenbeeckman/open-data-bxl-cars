@@ -12,6 +12,12 @@
         </script>
 
         <meta charset="utf-8">
+        <meta name="twitter:card" content="summary_large_image"></meta>
+        <meta name="twitter:site" content="@shadowmedia"></meta>
+        <meta property="og:url" content="http://labs.shadowmedia.be/opendata/bxl/cars/">
+        <meta property="og:title" content="Counting Cars in Brussels">
+        <meta property="og:description" content="Visualizing open data on car traffic in Brussels">
+        <meta property="og:image" content="http://labs.shadowmedia.be/opendata/bxl/cars/bxl_open_data_car_counters.png">
         <title>Counting Cars in Brussels</title>
         <link rel="stylesheet" href="lib/bootstrap/4.3.1/css/bootstrap.min.css">
         <link rel="stylesheet" href="lib/leaflet/1.4.0/leaflet.css">
@@ -81,6 +87,7 @@
         </div>
         <script src="lib/jquery/3.3.1/jquery-3.3.1.min.js"></script>
         <script src="lib/leaflet/1.4.0/leaflet.js"></script>
+        <script src="lib/leaflet/plugins/polylineDecorator/leaflet.polylineDecorator.js"></script>
         <script>
             /*
                 API documentation
@@ -92,6 +99,7 @@
 
             var map;
             var layer;
+            var arrowsLayer;
 
             async function getDevices(){
                 /* available devices */
@@ -134,13 +142,42 @@
                 if(typeof layer != 'undefined'){
                     layer.remove();
                 }
+
+                if(typeof arrowsLayer != 'undefined'){
+                    arrowsLayer.remove();
+                }
+
                 layer = L.geoJSON(null, {pointToLayer: visualizeDevice, onEachFeature: definePopup}).addTo(map);
                 layer.addData(devices);
 
+                arrowsLayer = L.geoJson(null, {pointToLayer: visualizeArrows, onEachFeature: definePopup}).addTo(map);
+                arrowsLayer.addData(devices);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+                /*
+                var arrowsOptions = { patterns: [
+                    {
+                        repeat: 0
+                        , symbol: L.Symbol.arrowHead({
+                            pixelSize: device.properties.results["5m"].t1.count/7 < 5 ? 5 : feature.properties.results["5m"].t1.count/7
+                            , polygon: false
+                            , headAngle: device.properties.orientation
+                            , pathOptions: { stroke: true}
+                        })
+                    }
+                ]}
+
+                L.polylineDecorator([latlng], options);*/
+
+                /*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);	
+                }).addTo(map);	*/
+
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 19
+                }).addTo(map);
 
                 setTimeout(getDevices, 60000);
             }
@@ -160,6 +197,17 @@
                 }
             }
 
+            function visualizeArrows(feature, latlng){
+                return new L.marker(latlng, {
+                    icon: new L.divIcon({
+                        className: "arrowIcon"
+                        , iconSize: new L.Point(20,20)
+                        , iconAnchor: new L.Point(10,10)
+                        , html: `<div style='border: 1px dotted; color: ${rgb(feature)}; font-size: 10px; transform: scale(${feature.properties.results["5m"].t1.count/4 < 20 ? 20 : feature.properties.results["5m"].t1.count/4}, ${feature.properties.results["5m"].t1.speed/4 < 1 ? 1 : feature.properties.results["5m"].t1.speed/4}); rotate(${feature.properties.orientation+90.0}deg)'>&#10145;</div>`
+                    })
+                });
+            }
+
             function visualizeDevice(feature, latlng){
                 var geojsonMarkerOptions = {
                     radius: feature.properties.results["5m"].t1.count/7 < 5 ? 5 : feature.properties.results["5m"].t1.count/7,
@@ -172,9 +220,16 @@
                 return L.circleMarker(latlng, geojsonMarkerOptions);
             }
 
+            function renderArrow(feature, latlng){
+                var options = { patterns: [{repeat: 0, symbol: L.Symbol.arrowHead({pixelSize: feature.properties.results["5m"].t1.count/7 < 5 ? 5 : feature.properties.results["5m"].t1.count/7, polygon: false, pathOptions: {stroke: true}})}]};
+
+                return L.polylineDecorator([latlng], options);
+            }
+
             function definePopup(feature, layer){
                 if(feature.properties && feature.properties.results){
                     layer.bindPopup(`<h4>${feature.properties.descr_en}</h4>`
+                        + `<div>Orientation: ${feature.properties.orientation}</div>`
                         + `<div><h6>${feature.properties.results["5m"].t1.start_time.split(" ")[1]}-${feature.properties.results["5m"].t1.end_time.split(" ")[1]}</h6>`
                         + `Count: ${feature.properties.results["5m"].t1.count} cars<br>`
                         + `Speed: ${feature.properties.results["5m"].t1.speed} km/h</div>`
