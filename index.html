@@ -45,12 +45,13 @@
                     </p>
                     <p>
                         <small>
-                            The map shows for each counter device (sum of the lanes at that location) a circle: 
+                            The map shows for each counter device (sum of the lanes at that location) an arrow: 
                             <ul>
                                 <li>Every minute the data is refreshed.</li>
-                                <li>You can click on each circle to see the raw data.</li>
-                                <li>The radius is the cars counted during the previous block of five minutes divided by seven (in pixels). The minimum radius is 5 pixels.</li>
-                                <li>The colour of each circle is determined by the average speed measured the previous block of five minutes: black means <i>no data</i>, red is slow, green is faster than 20 km/h.</li>
+                                <li>You can click on each arrow to see the raw data.</li>
+                                <li>The width of the arrow is relative to the amount of cars counted during the previous block of five minutes.</li>
+                                <li>The length of the car is relative to the speed of cars counted during the previous block of five minutes.</li>
+                                <li>The colour of each arrow is determined by the average speed measured the previous block of five minutes: black means <i>no data</i>, red is slow, green is faster than 20 km/h.</li>
                             </ul>
                             Please share this page if you like it. Comments are welcome on Twitter to <a href="https://twitter.com/shadowmedia">@shadowmedia</a>. (This site uses Google Analytics to know the number of site visits.)
                         </small>
@@ -203,7 +204,7 @@
                         className: "arrowIcon"
                         , iconSize: new L.Point(20,20)
                         , iconAnchor: new L.Point(10,10)
-                        , html: `<div style='color: ${rgb(feature)}; font-size: 20px; transform: rotate(${feature.properties.orientation+90.0}deg) scale(${feature.properties.results["5m"].t1.count/40 < 1 ? 1 : feature.properties.results["5m"].t1.count/40}, ${feature.properties.results["5m"].t1.speed/20 < 1 ? 1 : feature.properties.results["5m"].t1.speed/20})'>&#10145;</div>`
+                        , html: `<div style='color: ${rgb(feature)}; font-size: 20px; transform: rotate(${feature.properties.orientation+90.0}deg) scale(${feature.properties.results["5m"].t1.count/40 < 1 ? 1 : feature.properties.results["5m"].t1.count/40}, ${feature.properties.results["5m"].t1.speed/20 < 1 ? 1 : feature.properties.results["5m"].t1.speed/20})'>&#10140;</div>`
                     })
                 });
             }
